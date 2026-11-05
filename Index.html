@@ -1,0 +1,117 @@
+ <!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الحضور والانصراف - ريفان روز وريماس</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="bg-gray-50 font-sans antialiased text-gray-900">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6">
+        <header class="bg-white shadow rounded-2xl p-6 mb-6 text-center border border-gray-100">
+            <h1 class="text-2xl font-bold text-indigo-700 mb-2">نظام الحضور والإنصراف</h1>
+            <p class="text-sm text-gray-500">إدارة حضور الموظفين لمتاجر ريفان روز وريماس</p>
+        </header>
+
+        <div class="bg-white shadow rounded-2xl p-6 mb-6 border border-gray-100">
+            <h2 class="text-lg font-semibold mb-4 text-gray-800">تسجيل حضور أو انصراف</h2>
+            <form id="attendanceForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">اختر المحل:</label>
+                    <select id="shopName" class="w-full border-gray-300 rounded-xl shadow-sm p-3 border focus:ring-2 focus:ring-indigo-500">
+                        <option value="ريفان روز">ريفان روز للعطور ومستحضرات التجميل</option>
+                        <option value="ريماس">ريماس للعطور</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">اسم الموظف:</label>
+                    <input type="text" id="employeeName" required placeholder="أدخل اسم الموظف" class="w-full border-gray-300 rounded-xl shadow-sm p-3 border focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">الوردية (الشفت):</label>
+                    <select id="shiftType" class="w-full border-gray-300 rounded-xl shadow-sm p-3 border focus:ring-2 focus:ring-indigo-500">
+                        <option value="صباحي">وردية صباحية</option>
+                        <option value="مسائي">وردية مسائية</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-4 pt-2">
+                    <button type="button" onclick="recordAction('حضور')" class="w-full bg-emerald-600 text-white font-medium py-3 px-4 rounded-xl shadow hover:bg-emerald-700 transition">تسجيل حضور</button>
+                    <button type="button" onclick="recordAction('انصراف')" class="w-full bg-rose-600 text-white font-medium py-3 px-4 rounded-xl shadow hover:bg-rose-700 transition">تسجيل انصراف</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="bg-white shadow rounded-2xl p-6 border border-gray-100">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-semibold text-gray-800">سجل الحضور والتقارير</h2>
+                <button onclick="exportPDF()" class="bg-indigo-600 text-white text-sm px-4 py-2 rounded-xl shadow hover:bg-indigo-700 transition">تصدير PDF</button>
+            </div>
+            <div id="recordsList" class="space-y-3">
+                <p class="text-gray-500 text-center py-4">جاري التحميل أو لا توجد سجلات حالياً...</p>
+            </div>
+        </div>
+        
+        <footer class="text-center text-xs text-gray-400 mt-8">
+            تطوير وبرمجة: المبرمج عمر الصلاحي &copy; 2026
+        </footer>
+    </div>
+
+    <script>
+        // تخزين محلي مؤقت للعرض الفوري
+        function recordAction(type) {
+            const shop = document.getElementById('shopName').value;
+            const name = document.getElementById('employeeName').value;
+            const shift = document.getElementById('shiftType').value;
+            
+            if(!name) {
+                alert('الرجاء إدخال اسم الموظف');
+                return;
+            }
+
+            const time = new Date().toLocaleTimeString('ar-LY');
+            const date = new Date().toLocaleDateString('ar-LY');
+            
+            const record = { shop, name, shift, type, time, date };
+            let records = JSON.parse(localStorage.getItem('attendance_records') || '[]');
+            records.unshift(record);
+            localStorage.setItem('attendance_records', JSON.stringify(records));
+            
+            alert(`تم تسجيل ${type} بنجاح للموظف: ${name}`);
+            document.getElementById('employeeName').value = '';
+            loadRecords();
+        }
+
+        function loadRecords() {
+            const container = document.getElementById('recordsList');
+            let records = JSON.parse(localStorage.getItem('attendance_records') || '[]');
+            
+            if(records.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-4">لا توجد سجلات بعد</p>';
+                return;
+            }
+
+            container.innerHTML = records.map(r => `
+                <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center text-sm">
+                    <div>
+                        <span class="font-bold text-indigo-600">${r.shop}</span> - 
+                        <span class="font-semibold text-gray-800">${r.name}</span> 
+                        <span class="text-xs text-gray-500">(${r.shift})</span>
+                    </div>
+                    <div class="text-left">
+                        <span class="px-2 py-1 rounded text-xs ${r.type === 'حضور' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}">${r.type}</span>
+                        <div class="text-xs text-gray-400 mt-1">${r.date} - ${r.time}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function exportPDF() {
+            const element = document.getElementById('recordsList');
+            html2pdf().from(element).save('attendance-report.pdf');
+        }
+
+        window.onload = loadRecords;
+    </script>
+</body>
+</html>
